@@ -13,7 +13,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'created_by',
         as: 'creator'
       });
-      // Tambahkan relasi ke Minute di sini:
+      // Relasi baru: Pimpinan yang menyetujui dokumen rapat
+      Meeting.belongsTo(models.User, {
+        foreignKey: 'approved_by',
+        as: 'approver'
+      });
       Meeting.hasOne(models.Minute, {
         foreignKey: 'meeting_id',
         as: 'minute'
@@ -68,6 +72,24 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 'Terjadwal',
       },
+
+      // KOLOM BARU: Status Persetujuan oleh Pimpinan
+      approval_status: {
+        type: DataTypes.ENUM('Draft', 'Menunggu Verifikasi', 'Menunggu TTD', 'Approved', 'Rejected'),
+        allowNull: false,
+        defaultValue: 'Draft',
+      },
+      approved_by: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: null,
+      },
+      approved_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+      },
+
       created_by: {
         type: DataTypes.INTEGER,
         allowNull: false,

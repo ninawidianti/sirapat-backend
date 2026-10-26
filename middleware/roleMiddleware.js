@@ -1,14 +1,17 @@
 const roleMiddleware = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        message: 'User belum terautentikasi.'
+    if (!req.user || !req.user.role) {
+      return res.status(403).json({
+        message: 'Akses ditolak. Role tidak teridentifikasi.'
       });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const userRole = req.user.role.toLowerCase();
+    const hasRole = allowedRoles.some(role => role.toLowerCase() === userRole);
+
+    if (!hasRole) {
       return res.status(403).json({
-        message: 'Anda tidak memiliki akses ke fitur ini.'
+        message: 'Akses ditolak. Anda tidak memiliki izin untuk tindakan ini.'
       });
     }
 

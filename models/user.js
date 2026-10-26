@@ -16,6 +16,12 @@ module.exports = (sequelize, DataTypes) => {
         as: 'follow_up_updates'
       });
 
+      // Relasi ke rapat yang disetujui oleh pimpinan ini
+      User.hasMany(models.Meeting, {
+        foreignKey: 'approved_by',
+        as: 'approved_meetings'
+      });
+
       // Relasi Many-to-Many ke Kepanitiaan (Committee) via tabel pivot committee_members
       User.belongsToMany(models.Committee, {
         through: 'committee_members',
@@ -58,8 +64,9 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
 
+      // PERUBAHAN DI SINI: Menambahkan 'Pimpinan'
       role: {
-        type: DataTypes.ENUM('Admin', 'Peserta'),
+        type: DataTypes.ENUM('Admin', 'Peserta', 'Pimpinan'),
         allowNull: false,
         defaultValue: 'Peserta',
       },
@@ -106,8 +113,6 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: 'User',
       tableName: 'users',
-
-      // Menyesuaikan nama timestamp dengan database
       timestamps: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
