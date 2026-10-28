@@ -1,0 +1,3 @@
+2026/10/26-14:40:57.375 35c8 Creating DB D:\Magang_Kemnaker_2026\Perancangan_Proyek\Sistem_Notulensi_Rapat\backend\wa-session\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb since it was missing.
+2026/10/26-14:40:57.389 35c8 Reusing MANIFEST D:\Magang_Kemnaker_2026\Perancangan_Proyek\Sistem_Notulensi_Rapat\backend\wa-session\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/10/26-14:40:57.429 5810 Manual compaction at level-0 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)

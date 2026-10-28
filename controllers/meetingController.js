@@ -2,6 +2,7 @@
 
 const { Meeting, User, MeetingParticipant, Attendance, Minute } = require('../models');
 const { Op } = require('sequelize');
+const { sendMeetingNotification } = require('../services/whatsappService');
 
 // Helper untuk generate kode rapat otomatis (RPT-2026-001)
 const generateMeetingCode = async () => {
@@ -245,7 +246,83 @@ const createMeeting = async (req, res) => {
   }
 };
 
-// 4. Update Meeting
+// 4. Save Meeting (Membuat rapat sekaligus menyambungkan peserta & mengirimkan WA)
+const saveMeeting = async (req, res) => {
+  try {
+    const { title, agenda, date, start_time, end_time, location, description, userIds } = req.body;
+
+    if (!title || !agenda || !date || !start_time || !end_time || !location) {
+      return res.status(400).json({ message: 'Semua field utama rapat wajib diisi.' });
+    }
+
+    const created_by = req.user.user_id || req.user.id;
+    if (!created_by) {
+      return res.status(400).json({ message: 'User ID tidak ditemukan dalam token.' });
+    }
+
+    const meeting_code = await generateMeetingCode();
+
+    // 1. Buat data Rapat
+    const newMeeting = await Meeting.create({
+      meeting_code,
+      title,
+      agenda,
+      date,
+      start_time,
+      end_time,
+      location,
+      description: description || null,
+      status: 'Terjadwal',
+      approval_status: 'Draft',
+      created_by
+    });
+
+    const validUserIds = Array.isArray(userIds) ? userIds.map((id) => Number(id)) : [];
+
+    // 2. Jika ada peserta yang dipilih, tambahkan ke tabel MeetingParticipant & kirim WA
+    if (validUserIds.length > 0) {
+      const participantEntries = validUserIds.map((userId) => ({
+        meeting_id: newMeeting.meeting_id,
+        user_id: userId,
+        invitation_status: 'Diundang',
+        status_kehadiran: 'Belum Hadir'
+      }));
+
+      await MeetingParticipant.bulkCreate(participantEntries);
+
+      // Ambil nomor HP peserta
+      const participants = await User.findAll({
+        where: { user_id: validUserIds },
+        attributes: ['user_id', 'name', 'phone']
+      });
+
+      // Kirim Notifikasi WhatsApp
+      participants.forEach(async (user) => {
+        if (user.phone) {
+          await sendMeetingNotification(user.phone, {
+            title: newMeeting.title,
+            date: newMeeting.date,
+            time: `${newMeeting.start_time} - ${newMeeting.end_time}`,
+            summary: newMeeting.agenda || newMeeting.description || 'Silakan cek aplikasi untuk detail lengkap rapat.'
+          });
+        }
+      });
+    }
+
+    res.status(201).json({
+      message: 'Rapat berhasil disimpan dan notifikasi undangan dikirim ke peserta!',
+      data: newMeeting
+    });
+  } catch (error) {
+    console.error('Error saveMeeting:', error);
+    res.status(500).json({
+      message: 'Gagal menyimpan data rapat.',
+      error: error.message
+    });
+  }
+};
+
+// 5. Update Meeting
 const updateMeeting = async (req, res) => {
   try {
     const { id } = req.params;
@@ -280,7 +357,7 @@ const updateMeeting = async (req, res) => {
   }
 };
 
-// 5. Delete Meeting
+// 6. Delete Meeting
 const deleteMeeting = async (req, res) => {
   try {
     const { id } = req.params;
@@ -304,7 +381,7 @@ const deleteMeeting = async (req, res) => {
   }
 };
 
-// 6. Confirm Attendance
+// 7. Confirm Attendance
 const confirmAttendance = async (req, res) => {
   try {
     const userId = req.user.user_id || req.user.id;
@@ -353,7 +430,7 @@ const confirmAttendance = async (req, res) => {
   }
 };
 
-// 7. Admin Mengajukan Dokumen Rapat ke Pimpinan
+// 8. Admin Mengajukan Dokumen Rapat ke Pimpinan
 const requestApproval = async (req, res) => {
   try {
     const { id } = req.params;
@@ -396,7 +473,7 @@ const requestApproval = async (req, res) => {
   }
 };
 
-// 8. Pimpinan Menyetujui Dokumen Rapat
+// 9. Pimpinan Menyetujui Dokumen Rapat
 const approveMeeting = async (req, res) => {
   try {
     const { id } = req.params;
@@ -426,7 +503,7 @@ const approveMeeting = async (req, res) => {
   }
 };
 
-// 9. Pimpinan Menolak Dokumen Rapat (Rejected)
+// 10. Pimpinan Menolak Dokumen Rapat (Rejected)
 const rejectMeeting = async (req, res) => {
   try {
     const { id } = req.params;
@@ -455,7 +532,7 @@ const rejectMeeting = async (req, res) => {
   }
 };
 
-// 10. Get Daftar Rapat Menunggu Persetujuan Pimpinan
+// 11. Get Daftar Rapat Menunggu Persetujuan Pimpinan
 const getPendingApprovalMeetings = async (req, res) => {
   try {
     const meetings = await Meeting.findAll({
@@ -489,7 +566,7 @@ const getPendingApprovalMeetings = async (req, res) => {
   }
 };
 
-// 11. Update Status Fleksibel
+// 12. Update Status Fleksibel
 const updateMeetingStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -531,6 +608,7 @@ module.exports = {
   getMeetings,
   getMeetingById,
   createMeeting,
+  saveMeeting,
   updateMeeting,
   deleteMeeting,
   confirmAttendance,
